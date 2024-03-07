@@ -18,7 +18,7 @@
                 </Style>
             </StackPanel.Resources>
             <muxc:InfoBar x:Name="SuccessBar" IsOpen="False" Severity="Success" Title="Success" Message="Successfully switch your mods' version" />
-            <muxc:Expander x:Name="Switcher" >
+            <muxc:Expander x:Name="Switcher" IsExpanded="True">
                 <muxc:Expander.Header>
                     <Grid VerticalAlignment="Stretch" MinHeight="66">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -33,13 +33,49 @@
                 </muxc:Expander.Header>
                 <muxc:Expander.Content>
                     <Grid HorizontalAlignment="Stretch">
-                        <ComboBox x:Name="Version" Height="42" MinWidth="320" />
+                        <ComboBox x:Name="Version" Height="42" MinWidth="320" SelectionChanged="Version_SelectionChanged"/>
                         <Button x:Name="Refresh" Click="Refresh_Click" HorizontalAlignment="Right">
                             <SymbolIcon Symbol="Refresh" Margin="4"/>
                         </Button>
                     </Grid>
                 </muxc:Expander.Content>
             </muxc:Expander>
+            <muxc:Expander x:Name="Tweeker">
+                <muxc:Expander.Header>
+                    <Grid VerticalAlignment="Stretch" MinHeight="66">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="🗝️" VerticalAlignment="Center" FontSize="24" Margin="0,0,16,0"/>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text ="Turn your mods on or off" FontSize="14"/>
+                                <TextBlock Text="Expand to view, Check to turn them on. Needs confirm after modifying." Opacity="64" FontSize="10"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                    </Grid>
+                </muxc:Expander.Header>
+                <muxc:Expander.Content>
+                    <StackPanel>
+                        <ListView x:Name="TweekMods">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Click="CheckBox_Click"
+                  IsChecked="{Binding isEnabled, Mode=TwoWay}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding name}"/>
+                                            <TextBlock Text="{Binding version}" Margin="8,0,0,0" />
+                                        </StackPanel>
+                                    </CheckBox>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                        <Button x:Name="Reload" Click="Reload_Click" VerticalAlignment="Center" HorizontalAlignment="Right">
+                            <SymbolIcon Symbol="Refresh" Margin="4"/>
+                        </Button>
+                    </StackPanel>
+
+                </muxc:Expander.Content>
+            </muxc:Expander>
+
         </StackPanel>
     </Grid>
 </Page>

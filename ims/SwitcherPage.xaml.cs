@@ -14,6 +14,8 @@ using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using Windows.Storage;
+using System.IO.Compression;
+using System.Text.Json;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=234238
 
@@ -28,7 +30,11 @@ namespace ims
         {
             this.InitializeComponent();
             LoadMods();
+            TweekMods.ItemsSource = modInfoList;
         }
+
+        List<ModInfo> modInfoList = new List<ModInfo>();
+
 
         StorageFolder imsModsFolder;
 
@@ -43,7 +49,6 @@ namespace ims
 
             // 绑定到ComboBox
             Version.ItemsSource = subFolders.Select(folder => folder.Name).ToList();
-            Version.SelectedIndex = 0;
         }
 
         private async void Report()
@@ -88,7 +93,7 @@ namespace ims
 
         private async void Confirm_Click(object sender, RoutedEventArgs e)
         {
-            if (Version.Items.Count == 0)
+            if (!Version.Items.Any())
             {
                 Report();
             }
@@ -121,6 +126,9 @@ namespace ims
                     }
 
                     //Show success message
+                    SuccessBar.Title = "Success";
+                    SuccessBar.Message = "Successfully switch your mods' version";
+                    SuccessBar.Severity = Microsoft.UI.Xaml.Controls.InfoBarSeverity.Success;
                     SuccessBar.IsOpen = true;
                 }
                 catch (Exception ex)
@@ -135,6 +143,147 @@ namespace ims
         private void Refresh_Click(object sender, RoutedEventArgs e)
         {
             LoadMods();
+        }
+
+        private async void Listing()
+        {
+            if (Version.Items.Any() && Version.SelectedItem != null)
+            {
+                Tweeker.IsExpanded = false;
+                TweekMods.ItemsSource = null;
+                TweekMods.Items.Clear();
+                modInfoList.Clear();
+                // 获取选中的文件夹名称
+                string selectedFolderName = Version.SelectedItem.ToString();
+
+                // 获取选中的文件夹的路径
+                StorageFolder selectedFolder = await imsModsFolder.GetFolderAsync(selectedFolderName);
+
+                // 获取选中文件夹中的所有.jar文件
+                IReadOnlyList<StorageFile> jarFiles = await selectedFolder.GetFilesAsync();
+
+                foreach (StorageFile jarFile in jarFiles)
+                {
+                    if (jarFile.Path.EndsWith(".jar") || jarFile.Path.EndsWith(".jar.disable"))
+                    {
+                        bool isEnabled = !jarFile.Path.EndsWith(".jar.disable");
+                        using (var stream = await jarFile.OpenStreamForReadAsync())
+                        {
+                            using (ZipArchive zipArchive = new ZipArchive(stream))
+                            {
+                                // 遍历文件中的所有条目
+                                foreach (ZipArchiveEntry entry in zipArchive.Entries)
+                                {
+                                    // 如果条目是 fabric.mod.json 文件
+                                    if (entry.FullName == "fabric.mod.json")
+                                    {
+                                        // 读取 fabric.mod.json 文件的内容
+                                        string modJson = ReadEntryContent(entry);
+
+                                        // 将 fabric.mod.json 文件的内容反序列化为 ModInfo 对象
+                                        ModInfo modInfo = JsonSerializer.Deserialize<ModInfo>(modJson);
+
+                                        modInfo.isEnabled = isEnabled;
+                                        modInfo.FilePath = jarFile.Path;
+                                        // 将 ModInfo 对象添加到 List 中
+                                        modInfoList.Add(modInfo);
+                                    }
+                                }
+                            }
+                            stream.Close();
+                        }
+                    }
+                }
+                TweekMods.ItemsSource = modInfoList;
+                Tweeker.IsExpanded = true;
+            }
+            
+        }
+
+
+        /*private void CheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            CheckBox checkBox = (CheckBox)sender;
+            ModInfo modInfo = (ModInfo)checkBox.DataContext;
+            // 如果CheckBox被选中，去掉.disable后缀
+            RenameFile(modInfo, true);
+        }
+
+        private void CheckBox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            CheckBox checkBox = (CheckBox)sender;
+            ModInfo modInfo = (ModInfo)checkBox.DataContext;
+            // 如果CheckBox未被选中，添加.disable后缀
+            RenameFile(modInfo, false);
+        }*/
+        private void CheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            CheckBox checkBox = (CheckBox)sender;
+            ModInfo modInfo = (ModInfo)checkBox.DataContext;
+            RenameFile(modInfo, modInfo.isEnabled);
+        }
+        private async void RenameFile(ModInfo modInfo, bool enable)
+        {
+            // 重命名文件
+            try
+            {
+                StorageFile file = await StorageFile.GetFileFromPathAsync(modInfo.FilePath);
+
+                // 获取文件所在的文件夹
+                StorageFolder folder = await file.GetParentAsync();
+
+                // 创建新的文件名
+                string newFileName = !enable ? $"{modInfo.name}.jar.disable" : $"{modInfo.name}.jar";
+                await file.RenameAsync(newFileName);
+                modInfo.FilePath = folder.Path +"\\" + newFileName;
+            }
+            catch (Exception ex)
+            {
+                SuccessBar.Title = "Error";
+                SuccessBar.Severity = Microsoft.UI.Xaml.Controls.InfoBarSeverity.Error;
+                SuccessBar.Message = ex.Message;
+                SuccessBar.IsOpen = true;
+            }
+        }
+
+
+        /// <summary>
+        /// 读取 ZipArchiveEntry 的内容
+        /// </summary>
+        /// <param name="entry">要读取内容的 ZipArchiveEntry</param>
+        /// <returns>ZipArchiveEntry 的内容</returns>
+        private static string ReadEntryContent(ZipArchiveEntry entry)
+        {
+            // 使用 StreamReader 读取 ZipArchiveEntry 的内容
+            using (StreamReader streamReader = new StreamReader(entry.Open()))
+            {
+                return streamReader.ReadToEnd();
+            }
+        }
+
+        public class ModInfo
+        {
+            /// <summary>
+            /// Mod 名称
+            /// </summary>
+            public string name { get; set; }
+
+            /// <summary>
+            /// Mod 版本
+            /// </summary>
+            public string version { get; set; }
+            public bool isEnabled { get; set; }
+            public string FilePath { get; set; }
+        }
+
+        private void Version_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            Listing();
+        }
+
+        private void Reload_Click(object sender, RoutedEventArgs e)
+        {
+            Listing();
         }
     }
 }
