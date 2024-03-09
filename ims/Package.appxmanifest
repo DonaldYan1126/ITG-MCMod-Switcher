@@ -9,7 +9,7 @@
 	<Identity
 	  Name="098dc1ee-84c1-4be1-87b0-9c70284e5760"
 	  Publisher="CN=Intergriture Project"
-	  Version="1.0.1.0" />
+	  Version="1.2.0.0" />
 
 	<mp:PhoneIdentity PhoneProductId="098dc1ee-84c1-4be1-87b0-9c70284e5760" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
@@ -45,6 +45,7 @@
 
 	<Capabilities>		
 		<rescap:Capability Name="broadFileSystemAccess" />
+		<rescap:Capability Name="confirmAppClose" />
 		<Capability Name="internetClient" />
 		<uap:Capability Name="documentsLibrary" />
 	</Capabilities>

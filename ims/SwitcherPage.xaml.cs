@@ -16,6 +16,7 @@ using Windows.UI.Xaml.Navigation;
 using Windows.Storage;
 using System.IO.Compression;
 using System.Text.Json;
+using Windows.UI.Xaml.Media.Imaging;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=234238
 
@@ -31,10 +32,40 @@ namespace ims
             this.InitializeComponent();
             LoadMods();
             TweekMods.ItemsSource = modInfoList;
+            Windows.UI.Core.Preview.SystemNavigationManagerPreview.GetForCurrentView().CloseRequested +=
+            async (sender, args) =>
+            {
+                args.Handled = true;
+                ContentDialog CloseDialog = new ContentDialog
+                {
+                    XamlRoot = this.XamlRoot,
+                    Title = "Confirm your change?",
+                    Content = "For safety reason, we will not modify your .minecraft folder directly. If you want, please click Yes below, or back to edit and click the Confirm button showing on Switcher page.",
+                    PrimaryButtonText = "Yes",
+                    SecondaryButtonText = "No",
+                    CloseButtonText = "Cancel",
+                    DefaultButton = ContentDialogButton.Primary
+                };
+                if (isChanged)
+                {
+                    var result = await CloseDialog.ShowAsync();
+                    if (result == ContentDialogResult.Primary)
+                    {
+                        ConfirmChange();
+                    }
+                    else if (result == ContentDialogResult.Secondary)
+                    {
+                        App.Current.Exit();
+                    }
+                }
+                else App.Current.Exit();
+            };
         }
 
-        List<ModInfo> modInfoList = new List<ModInfo>();
 
+
+        List<ModInfo> modInfoList = new List<ModInfo>();
+        bool isChanged = false;
 
         StorageFolder imsModsFolder;
 
@@ -53,11 +84,23 @@ namespace ims
 
         private async void Report()
         {
+            Thickness thickness = new Thickness();
+            thickness.Bottom = 16;
+            ImageBrush imageBrush = new ImageBrush();
+            StackPanel panel = new StackPanel();
+            TextBlock text = new TextBlock();
+            text.Text = "There's no mod folder at Documents/IMSMods.\nCreate Folder such as 1.20.4-Fabric and put mods(.jar) in it.";
+            text.Margin = thickness;
+            Image image = new Image();
+            imageBrush.ImageSource = new BitmapImage(new Uri("ms-appx:///Assets/Tutorial/AddFiles.png", UriKind.Absolute));
+            image.Source = imageBrush.ImageSource;
+            panel.Children.Add(text);
+            panel.Children.Add(image);
             ContentDialog ErrorDialog = new ContentDialog
             {
                 XamlRoot = this.XamlRoot,
                 Title = "No Mods!",
-                Content = "There's no mod folder at Documents/IMSMods. Create Folder such as 1.20.4-Fabric and put mods(.jar) in it.",
+                Content = panel,
                 PrimaryButtonText = "Refresh",
                 CloseButtonText = "Later",
                 DefaultButton = ContentDialogButton.Primary
@@ -73,11 +116,23 @@ namespace ims
 
         private async void Request()
         {
+            Thickness thickness = new Thickness();
+            thickness.Bottom = 16;
+            ImageBrush imageBrush = new ImageBrush();
+            StackPanel panel = new StackPanel();
+            TextBlock text = new TextBlock();
+            text.Text = "Because this is a UWP app,\nwe need permission to access your .minecraft folder";
+            text.Margin = thickness;
+            Image image = new Image();
+            imageBrush.ImageSource = new BitmapImage(new Uri("ms-appx:///Assets/Tutorial/GivePermission.png", UriKind.Absolute));
+            image.Source = imageBrush.ImageSource;
+            panel.Children.Add(text);
+            panel.Children.Add(image);
             ContentDialog ErrorDialog = new ContentDialog
             {
                 XamlRoot = this.XamlRoot,
                 Title = "Access Denial!",
-                Content = "Because this is a UWP app, so we have to request your permission to access your Minecraft folder",
+                Content = panel,
                 PrimaryButtonText = "OK, I will",
                 CloseButtonText = "Wait",
                 DefaultButton = ContentDialogButton.Primary
@@ -91,13 +146,13 @@ namespace ims
                 await Windows.System.Launcher.LaunchUriAsync(new Uri("ms-settings:privacy-broadfilesystemaccess"));
         }
 
-        private async void Confirm_Click(object sender, RoutedEventArgs e)
+        private async void ConfirmChange()
         {
             if (!Version.Items.Any())
             {
                 Report();
             }
-            else
+            else if (Version.SelectedItem != null)
             {
                 // 获取选中的文件夹名称
                 string selectedFolderName = Version.SelectedItem.ToString();
@@ -137,7 +192,11 @@ namespace ims
                 }
 
             }
+        }
 
+        private void Confirm_Click(object sender, RoutedEventArgs e)
+        {
+            ConfirmChange();
         }
 
         private void Refresh_Click(object sender, RoutedEventArgs e)
@@ -145,11 +204,23 @@ namespace ims
             LoadMods();
         }
 
+        private void Version_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            Listing();
+            isChanged = true;
+        }
+
+        private void Reload_Click(object sender, RoutedEventArgs e)
+        {
+            Listing();
+        }
+
         private async void Listing()
         {
             if (Version.Items.Any() && Version.SelectedItem != null)
             {
                 Tweeker.IsExpanded = false;
+                // Delete source and clear items to refresh ListView.
                 TweekMods.ItemsSource = null;
                 TweekMods.Items.Clear();
                 modInfoList.Clear();
@@ -164,7 +235,7 @@ namespace ims
 
                 foreach (StorageFile jarFile in jarFiles)
                 {
-                    if (jarFile.Path.EndsWith(".jar") || jarFile.Path.EndsWith(".jar.disable"))
+                    if (jarFile.Name.EndsWith(".jar") || jarFile.Name.EndsWith(".jar.disable"))
                     {
                         bool isEnabled = !jarFile.Path.EndsWith(".jar.disable");
                         using (var stream = await jarFile.OpenStreamForReadAsync())
@@ -184,6 +255,7 @@ namespace ims
                                         ModInfo modInfo = JsonSerializer.Deserialize<ModInfo>(modJson);
 
                                         modInfo.isEnabled = isEnabled;
+                                        modInfo.fileName = jarFile.DisplayName;
                                         modInfo.FilePath = jarFile.Path;
                                         // 将 ModInfo 对象添加到 List 中
                                         modInfoList.Add(modInfo);
@@ -197,27 +269,12 @@ namespace ims
                 TweekMods.ItemsSource = modInfoList;
                 Tweeker.IsExpanded = true;
             }
-            
+
         }
 
-
-        /*private void CheckBox_Checked(object sender, RoutedEventArgs e)
-        {
-            CheckBox checkBox = (CheckBox)sender;
-            ModInfo modInfo = (ModInfo)checkBox.DataContext;
-            // 如果CheckBox被选中，去掉.disable后缀
-            RenameFile(modInfo, true);
-        }
-
-        private void CheckBox_Unchecked(object sender, RoutedEventArgs e)
-        {
-            CheckBox checkBox = (CheckBox)sender;
-            ModInfo modInfo = (ModInfo)checkBox.DataContext;
-            // 如果CheckBox未被选中，添加.disable后缀
-            RenameFile(modInfo, false);
-        }*/
         private void CheckBox_Click(object sender, RoutedEventArgs e)
         {
+            isChanged = true;
             CheckBox checkBox = (CheckBox)sender;
             ModInfo modInfo = (ModInfo)checkBox.DataContext;
             RenameFile(modInfo, modInfo.isEnabled);
@@ -233,9 +290,9 @@ namespace ims
                 StorageFolder folder = await file.GetParentAsync();
 
                 // 创建新的文件名
-                string newFileName = !enable ? $"{modInfo.name}.jar.disable" : $"{modInfo.name}.jar";
+                string newFileName = !enable ? $"{modInfo.fileName}.jar.disable" : $"{modInfo.fileName}.jar";
                 await file.RenameAsync(newFileName);
-                modInfo.FilePath = folder.Path +"\\" + newFileName;
+                modInfo.FilePath = folder.Path + "\\" + newFileName;
             }
             catch (Exception ex)
             {
@@ -261,6 +318,8 @@ namespace ims
             }
         }
 
+
+
         public class ModInfo
         {
             /// <summary>
@@ -274,16 +333,9 @@ namespace ims
             public string version { get; set; }
             public bool isEnabled { get; set; }
             public string FilePath { get; set; }
+            public string fileName { get; set; }
         }
 
-        private void Version_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            Listing();
-        }
 
-        private void Reload_Click(object sender, RoutedEventArgs e)
-        {
-            Listing();
-        }
     }
 }

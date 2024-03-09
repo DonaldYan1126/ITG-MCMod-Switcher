@@ -9,8 +9,9 @@
     mc:Ignorable="d"
     Background="Transparent">
 
-    <Grid VerticalAlignment="Top" HorizontalAlignment="Stretch" Margin="64">
-        <StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Center" Orientation="Vertical" MaxWidth="1000" MinWidth="420">
+    <ScrollViewer HorizontalAlignment="Stretch" VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch">
+        <Grid Margin="24">
+            <StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Orientation="Vertical" MaxWidth="1000" MinWidth="420">
             <StackPanel.Resources>
                 <Style TargetType="muxc:Expander">
                     <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -50,32 +51,36 @@
                                 <TextBlock Text="Expand to view, Check to turn them on. Needs confirm after modifying." Opacity="64" FontSize="10"/>
                             </StackPanel>
                         </StackPanel>
-
                     </Grid>
                 </muxc:Expander.Header>
                 <muxc:Expander.Content>
-                    <StackPanel>
-                        <ListView x:Name="TweekMods">
-                            <ListView.ItemTemplate>
-                                <DataTemplate>
-                                    <CheckBox Click="CheckBox_Click"
+                    <Grid MaxHeight="720">
+                        <ScrollViewer Margin="0,0,0,40">
+                            <StackPanel>
+                                <ListView x:Name="TweekMods">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Click="CheckBox_Click"
                   IsChecked="{Binding isEnabled, Mode=TwoWay}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding name}"/>
-                                            <TextBlock Text="{Binding version}" Margin="8,0,0,0" />
-                                        </StackPanel>
-                                    </CheckBox>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                        </ListView>
-                        <Button x:Name="Reload" Click="Reload_Click" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding name}"/>
+                                                    <TextBlock Text="{Binding version}" Margin="8,0,0,0" />
+                                                </StackPanel>
+                                            </CheckBox>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+
+                            </StackPanel>
+                        </ScrollViewer>
+                        <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" x:Name="Reload" Click="Reload_Click">
                             <SymbolIcon Symbol="Refresh" Margin="4"/>
                         </Button>
-                    </StackPanel>
-
+                    </Grid>
                 </muxc:Expander.Content>
             </muxc:Expander>
-
         </StackPanel>
-    </Grid>
+        </Grid>
+        
+    </ScrollViewer>
 </Page>
