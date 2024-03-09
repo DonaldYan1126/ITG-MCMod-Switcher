@@ -1,4 +1,4 @@
-# Intergriture MCMods Switcher
+# Intergriture MCMod Switcher
 
 This app is made by Donald Yan & Intergritrue Project. The platform is UWP.
 
